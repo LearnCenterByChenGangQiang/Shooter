@@ -1,0 +1,40 @@
+// ChenGangQiang All rights Reserved.
+
+
+#include "ShooterAnimInstance.h"
+#include "ShooterCharacter.h"
+#include "GameFramework/CharacterMovementComponent.h"
+
+void UShooterAnimInstance::NativeInitializeAnimation()
+{
+	ShooterCharacter = Cast<AShooterCharacter>(TryGetPawnOwner());
+}
+
+void UShooterAnimInstance::UpdateAnimationProperties(float DeltaTime)
+{
+	if (ShooterCharacter == nullptr)
+	{
+		ShooterCharacter = Cast<AShooterCharacter>(TryGetPawnOwner());
+	}
+
+	if (ShooterCharacter)
+	{
+		// 从速度（矢量）中获取角色的横向速度 Get the lateral speed of the character from velocity
+		FVector Velocity { ShooterCharacter->GetVelocity() };
+		Velocity.Z = 0;
+		Speed = Velocity.Size();
+
+		// 是否在空中 Is the character in the air?
+		bIsInAir = ShooterCharacter->GetCharacterMovement()->IsFalling();
+
+		// 是否加速 Is the character accelerating?
+		if (ShooterCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f)
+		{
+			bIsAccelerating = true;
+		}
+		else
+		{
+			bIsAccelerating = false;
+		}
+	}
+}
