@@ -104,6 +104,54 @@ void AShooterCharacter::Input_Fire(const FInputActionValue& Value)
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFlash, SocketTransform);
 		}
 
+		// 获取当前视口大小
+		FVector2D ViewportSize;
+		if (GEngine && GEngine->GameViewport)
+		{
+			GEngine->GameViewport->GetViewportSize(ViewportSize);
+		}
+		// 计算屏幕中心点位置并向上偏移50个单位
+		FVector2D CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
+		CrosshairLocation.Y -= 50.f;
+
+		FVector CrosshairWorldPosition;
+		FVector CrosshairWorldDirection;
+
+		// 将屏幕位置转换为世界位置和方向
+		bool bScreenToWorld = UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(this, 0),
+			CrosshairLocation, CrosshairWorldPosition, CrosshairWorldDirection);
+
+		if (bScreenToWorld)
+		{
+			FHitResult ScreenTraceHit;
+			const FVector Start { CrosshairWorldPosition };
+			const FVector End { CrosshairWorldPosition + CrosshairWorldDirection * 50000.f };
+
+			// 设置激光的终点为默认的射线终点
+			FVector BeamEndPoint { End };
+
+			// 进行从十字准星位置开始的射线检测
+			GetWorld()->LineTraceSingleByChannel(ScreenTraceHit, Start, End, ECollisionChannel::ECC_Visibility);
+			if (ScreenTraceHit.bBlockingHit) // 如果射线碰撞到物体
+			{
+				// 光束的端点现在是轨迹命中位置
+				BeamEndPoint = ScreenTraceHit.Location;
+				if (ImpactParticles)
+				{
+					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, ScreenTraceHit.Location);
+				}
+			}
+			if (BeamParticles)
+			{
+				UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), BeamParticles, SocketTransform);
+				if (Beam)
+				{
+					Beam->SetVectorParameter(FName("Target"), BeamEndPoint);
+				}
+			}
+		}
+
+		/*
 		FHitResult FireHit;
 		const FVector Start { SocketTransform.GetLocation() };
 		const FQuat Rotation { SocketTransform.GetRotation() };
@@ -133,6 +181,7 @@ void AShooterCharacter::Input_Fire(const FInputActionValue& Value)
 				Beam->SetVectorParameter(FName("Target"), BeamEndPoint);
 			}
 		}
+		*/
 	}
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && HipFireMontage)
