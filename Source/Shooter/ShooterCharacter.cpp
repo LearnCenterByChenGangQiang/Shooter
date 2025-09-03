@@ -103,109 +103,77 @@ void AShooterCharacter::Input_Fire(const FInputActionValue& Value)
 		{
 			UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), MuzzleFlash, SocketTransform);
 		}
-
-		// 获取当前视口大小
-		FVector2D ViewportSize;
-		if (GEngine && GEngine->GameViewport)
+		FVector BeamEnd;
+		bool bBeamEnd = GetBeamEndLocation(SocketTransform.GetLocation(), BeamEnd);
+		if (bBeamEnd)
 		{
-			GEngine->GameViewport->GetViewportSize(ViewportSize);
-		}
-		// 计算屏幕中心点位置并向上偏移50个单位
-		FVector2D CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
-		CrosshairLocation.Y -= 50.f;
-
-		FVector CrosshairWorldPosition;
-		FVector CrosshairWorldDirection;
-
-		// 将屏幕位置转换为世界位置和方向
-		bool bScreenToWorld = UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(this, 0),
-			CrosshairLocation, CrosshairWorldPosition, CrosshairWorldDirection);
-
-		if (bScreenToWorld)
-		{
-			FHitResult ScreenTraceHit;
-			const FVector Start { CrosshairWorldPosition };
-			const FVector End { CrosshairWorldPosition + CrosshairWorldDirection * 50000.f };
-
-			// 设置激光的终点为默认的射线终点
-			FVector BeamEndPoint { End };
-
-			// 进行从十字准星位置开始的射线检测
-			GetWorld()->LineTraceSingleByChannel(ScreenTraceHit, Start, End, ECollisionChannel::ECC_Visibility);
-			if (ScreenTraceHit.bBlockingHit) // 如果射线碰撞到物体
-			{
-				// 光束的端点现在是轨迹命中位置
-				BeamEndPoint = ScreenTraceHit.Location;
-				if (ImpactParticles)
-				{
-					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, ScreenTraceHit.Location);
-				}
-			}
-
-			// 从枪口位置向光束端点发射第二条射线
-			FHitResult WeaponTraceHit;
-			const FVector WeaponTraceStart { SocketTransform.GetLocation() };
-			const FVector WeaponTraceEnd { BeamEndPoint };
-			GetWorld()->LineTraceSingleByChannel(WeaponTraceHit, WeaponTraceStart, WeaponTraceEnd, ECollisionChannel::ECC_Visibility);
-			if (WeaponTraceHit.bBlockingHit) // 如果第二条射线碰撞到
-			{
-				BeamEndPoint = WeaponTraceHit.Location; // 更新光束端点为第二条射线的命中位置
-			}
-			
-			// 在更新光束端点（BeamEndPoint）后，生成撞击粒子
 			if (ImpactParticles)
 			{
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, BeamEndPoint);
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, BeamEnd);
 			}
-			
-			if (BeamParticles)
-			{
-				UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), BeamParticles, SocketTransform);
-				if (Beam)
-				{
-					Beam->SetVectorParameter(FName("Target"), BeamEndPoint);
-				}
-			}
-		}
-
-		/*
-		FHitResult FireHit;
-		const FVector Start { SocketTransform.GetLocation() };
-		const FQuat Rotation { SocketTransform.GetRotation() };
-		const FVector RotationAxis { Rotation.GetAxisX() };
-		const FVector End { Start + RotationAxis * 50000.f };
-
-		FVector BeamEndPoint { End };
-
-		GetWorld()->LineTraceSingleByChannel(FireHit, Start, End, ECollisionChannel::ECC_Visibility);
-		if (FireHit.bBlockingHit)
-		{
-			//DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 2.f);
-			//DrawDebugPoint(GetWorld(), FireHit.Location, 5.f, FColor::Red, false, 2.f);
-
-			BeamEndPoint = FireHit.Location;
-			
-			if (ImpactParticles)
-			{
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, FireHit.Location);
-			}
-		}
-		if (BeamParticles)
-		{
 			UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), BeamParticles, SocketTransform);
 			if (Beam)
 			{
-				Beam->SetVectorParameter(FName("Target"), BeamEndPoint);
+				Beam->SetVectorParameter(FName("Target"), BeamEnd);
 			}
 		}
-		*/
 	}
+	
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if (AnimInstance && HipFireMontage)
 	{
 		AnimInstance->Montage_Play(HipFireMontage);
 		AnimInstance->Montage_JumpToSection(FName("StartFire"));
 	}
+}
+
+bool AShooterCharacter::GetBeamEndLocation(const FVector& MuzzleSocketLocation, FVector& OutBeamLocation)
+{
+	// 获取当前视口大小
+	FVector2D ViewportSize;
+	if (GEngine && GEngine->GameViewport)
+	{
+		GEngine->GameViewport->GetViewportSize(ViewportSize);
+	}
+	// 计算屏幕中心点位置并向上偏移50个单位
+	FVector2D CrosshairLocation(ViewportSize.X / 2.f, ViewportSize.Y / 2.f);
+	CrosshairLocation.Y -= 50.f;
+	FVector CrosshairWorldPosition;
+	FVector CrosshairWorldDirection;
+
+	// 将屏幕位置转换为世界位置和方向
+	bool bScreenToWorld = UGameplayStatics::DeprojectScreenToWorld(UGameplayStatics::GetPlayerController(this, 0),
+		CrosshairLocation, CrosshairWorldPosition, CrosshairWorldDirection);
+
+	if (bScreenToWorld)
+	{
+		FHitResult ScreenTraceHit;
+		const FVector Start { CrosshairWorldPosition };
+		const FVector End { CrosshairWorldPosition + CrosshairWorldDirection * 50000.f };
+
+		// 设置激光的终点为默认的射线终点
+		OutBeamLocation = End;
+
+		// 进行从十字准星位置开始的射线检测
+		GetWorld()->LineTraceSingleByChannel(ScreenTraceHit, Start, End, ECollisionChannel::ECC_Visibility);
+		if (ScreenTraceHit.bBlockingHit) // 如果射线碰撞到物体
+		{
+			// 光束的端点现在是轨迹命中位置
+			OutBeamLocation = ScreenTraceHit.Location;
+		}
+
+		// 从枪口位置向光束端点发射第二条射线
+		FHitResult WeaponTraceHit;
+		const FVector WeaponTraceStart { MuzzleSocketLocation };
+		const FVector WeaponTraceEnd { OutBeamLocation };
+		GetWorld()->LineTraceSingleByChannel(WeaponTraceHit, WeaponTraceStart, WeaponTraceEnd, ECollisionChannel::ECC_Visibility);
+		if (WeaponTraceHit.bBlockingHit) // 如果第二条射线碰撞到
+		{
+			OutBeamLocation = WeaponTraceHit.Location; // 更新光束端点为第二条射线的命中位置
+		}
+		return true;
+	}
+	return false;
 }
 
 // Called every frame
