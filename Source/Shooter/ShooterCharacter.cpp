@@ -5,6 +5,8 @@
 
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 
 // Sets default values
 AShooterCharacter::AShooterCharacter()
@@ -28,7 +30,43 @@ AShooterCharacter::AShooterCharacter()
 void AShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(InputMappingContext, 0);
+		}
+	}
 	
+}
+
+void AShooterCharacter::Input_Move(const FInputActionValue& Value)
+{
+	const FVector2d MovementVector = Value.Get<FVector2d>();
+	const FRotator MovementRotation(0.f, GetControlRotation().Yaw, 0.f);
+
+	// 如果前后移动值不为零，计算前方向量并移动角色
+	if (MovementVector.Y != 0.f)
+	{
+		const FVector ForwardDirection = MovementRotation.RotateVector(FVector::ForwardVector);
+		AddMovementInput(ForwardDirection, MovementVector.Y);
+	}
+
+	// 如果左右移动值不为零，计算右方向量并移动角色
+	if (MovementVector.X != 0.f)
+	{
+		const FVector RightDirection = MovementRotation.RotateVector(FVector::RightVector);
+		AddMovementInput(RightDirection, MovementVector.X);
+	}
+}
+
+void AShooterCharacter::Input_Look(const FInputActionValue& Value)
+{
+	const FVector2d LookAxisVector = Value.Get<FVector2d>();
+	
+	if (LookAxisVector.X != 0) AddControllerYawInput(LookAxisVector.X);
+	if (LookAxisVector.Y != 0) AddControllerPitchInput(-LookAxisVector.Y);
 }
 
 // Called every frame
@@ -43,5 +81,12 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
+	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AShooterCharacter::Input_Move);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AShooterCharacter::Input_Look);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+	}
 }
 
