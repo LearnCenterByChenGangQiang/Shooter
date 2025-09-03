@@ -141,6 +141,23 @@ void AShooterCharacter::Input_Fire(const FInputActionValue& Value)
 					UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, ScreenTraceHit.Location);
 				}
 			}
+
+			// 从枪口位置向光束端点发射第二条射线
+			FHitResult WeaponTraceHit;
+			const FVector WeaponTraceStart { SocketTransform.GetLocation() };
+			const FVector WeaponTraceEnd { BeamEndPoint };
+			GetWorld()->LineTraceSingleByChannel(WeaponTraceHit, WeaponTraceStart, WeaponTraceEnd, ECollisionChannel::ECC_Visibility);
+			if (WeaponTraceHit.bBlockingHit) // 如果第二条射线碰撞到
+			{
+				BeamEndPoint = WeaponTraceHit.Location; // 更新光束端点为第二条射线的命中位置
+			}
+			
+			// 在更新光束端点（BeamEndPoint）后，生成撞击粒子
+			if (ImpactParticles)
+			{
+				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ImpactParticles, BeamEndPoint);
+			}
+			
 			if (BeamParticles)
 			{
 				UParticleSystemComponent* Beam = UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), BeamParticles, SocketTransform);
