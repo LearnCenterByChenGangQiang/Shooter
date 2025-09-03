@@ -37,9 +37,13 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> JumpAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> FireAction;
 	
 	void Input_Move(const FInputActionValue& Value);
 	void Input_Look(const FInputActionValue& Value);
+	void Input_Fire(const FInputActionValue& Value);
 #pragma endregion
 
 public:	

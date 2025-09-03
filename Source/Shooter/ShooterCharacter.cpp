@@ -80,6 +80,11 @@ void AShooterCharacter::Input_Look(const FInputActionValue& Value)
 	if (LookAxisVector.Y != 0) AddControllerPitchInput(-LookAxisVector.Y);
 }
 
+void AShooterCharacter::Input_Fire(const FInputActionValue& Value)
+{
+	UE_LOG(LogTemp, Display, TEXT("Fire"));
+}
+
 // Called every frame
 void AShooterCharacter::Tick(float DeltaTime)
 {
@@ -98,6 +103,8 @@ void AShooterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AShooterCharacter::Input_Look);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &AShooterCharacter::Input_Fire);
 	}
 }
 
