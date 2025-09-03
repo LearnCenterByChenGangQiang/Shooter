@@ -1,0 +1,23 @@
+# UE5生成的目录
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+Build/
+
+
+# 开发IDE生成的目录或文件
+.vscode
+.vs
+*.VC.db
+*.opensdf
+*.opendb
+*.sdf
+*.suo
+*.sln
+*.xcodeproj
+*.xcworkspace
+
+.idea
+
+
